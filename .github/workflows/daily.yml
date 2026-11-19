@@ -1,0 +1,33 @@
+# Runs the pipeline every day at 6:00 AM Pacific (14:00 UTC).
+# It only builds proposals; nothing is written to the CRM without approval in the review app.
+name: daily-bellhaven-pipeline
+on:
+  schedule:
+    - cron: "0 14 * * *"
+  workflow_dispatch: {}          # allows a manual run from the Actions tab
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - name: Write config from secrets
+        run: |
+          cat > config.py <<PY
+          BASE_URL = "https://analyst-assessment-production.up.railway.app"
+          API_URL = BASE_URL + "/api/v1"
+          TOKEN = "${{ secrets.CRM_TOKEN }}"
+          HEADERS = {"Authorization": f"Bearer {TOKEN}"}
+          BELLHAVEN_PARENT_ID = "0015QAPLGS3FVYEEEM"
+          PY
+      - run: python pipeline.py
+      # Commit the refreshed proposals (decisions.json is what makes re-runs skip decided items)
+      - run: |
+          git config user.name "pipeline-bot"
+          git config user.email "pipeline-bot@users.noreply.github.com"
+          git add data/proposals.json data/site_locations.json data/crm_accounts.json
+          git commit -m "Daily pipeline run" || echo "No changes"
+          git push
