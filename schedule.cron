@@ -1,0 +1,3 @@
+# Local alternative to GitHub Actions: run the pipeline every day at 6:00 AM.
+# Install with:  crontab schedule.cron   (adjust the path first)
+0 6 * * * cd /Users/ellenalves/Desktop/bellhaven-crm && ./venv/bin/python pipeline.py >> data/pipeline.log 2>&1
